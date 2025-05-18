@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Traffic Signals</title>
+  <style>
+    .signal {
+      width: 100px; height: 100px;
+      border: 2px solid black;
+      border-radius: 10px;
+      margin: 10px;
+      display: inline-block;
+      font-size: 20px;
+      text-align: center;
+      line-height: 100px;
+    }
+
+    video {
+      margin: 10px;
+      border: 2px solid #444;
+    }
+  </style>
+</head>
+<body>
+  <h2>Start Simulation</h2>
+  <form id="startForm">
+    <label>Cycle Time: <input type="number" name="cycle_time" required></label><br><br>
+    <label>Video 1: <input type="file" name="video1" accept="video/*" required></label><br>
+    <label>Video 2: <input type="file" name="video2" accept="video/*" required></label><br>
+    <label>Video 3: <input type="file" name="video3" accept="video/*" required></label><br>
+    <label>Video 4: <input type="file" name="video4" accept="video/*" required></label><br><br>
+    <button type="submit">Start</button>
+  </form>
+
+  <h3>Video Preview</h3>
+  <video id="v1" width="300" controls></video>
+  <video id="v2" width="300" controls></video>
+  <video id="v3" width="300" controls></video>
+  <video id="v4" width="300" controls></video>
+
+  <h2>Live Traffic Signals</h2>
+  <div id="signals">
+    <div class="signal" id="s0">Red</div>
+    <div class="signal" id="s1">Red</div>
+    <div class="signal" id="s2">Red</div>
+    <div class="signal" id="s3">Red</div>
+  </div>
+
+  <script>
+  const ws = new WebSocket("ws://localhost:8000/ws");
+
+  ws.onmessage = function(event) {
+    const signalData = JSON.parse(event.data);
+    for (let i = 0; i < 4; i++) {
+      const signal = document.getElementById("s" + i);
+      signal.innerText = signalData[i].toUpperCase();
+      signal.style.backgroundColor = signalData[i];
+    }
+  };
+
+  const form = document.getElementById("startForm");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+
+    const files = [
+      form.video1.files[0],
+      form.video2.files[0],
+      form.video3.files[0],
+      form.video4.files[0]
+    ];
+
+    const videoIds = ["v1", "v2", "v3", "v4"];
+
+    // Send form data to backend and wait for backend to start processing
+    const res = await fetch("/start", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    // Now backend is processing — start videos
+    for (let i = 0; i < 4; i++) {
+      const url = URL.createObjectURL(files[i]);
+      const video = document.getElementById(videoIds[i]);
+      video.src = url;
+      video.load();
+      video.play();
+    }
+
+    alert(data.message); // Optional
+  });
+</script>
+
+</body>
+</html>
